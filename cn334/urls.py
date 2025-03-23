@@ -17,10 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from ecommerce import views as ecom_views
+from main import views as main_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("ecommerce/", ecom_views.ecommerce_index_view),
-    path("ecommerce/item/<item_id>", ecom_views.item_view)
+    path('user/<str:username>/', main_views.user_detail),
+    path('product/all/', main_views.product_all),
+    path('product/byid/<int:id>/', main_views.productById),
+    path('comment/byProductId/<int:id>/', main_views.comment),
+    path('summarize/', main_views.summarize),
 ]
