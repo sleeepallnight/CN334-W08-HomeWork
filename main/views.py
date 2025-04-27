@@ -1,80 +1,67 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
-
-USERS = [
-    {"username": "katherine", "email": "cat@example.com", "signup_date": "2024-15-03"},
-    {"username": "octopus", "email": "octopus@example.com", "signup_date": "2024-16-03"},
-    {"username": "pudding", "email": "pudding@example.com", "signup_date": "2024-17-03"},
-]
-
-PRODUCTS = [
-    {"id": 1, "name": "mouse", "price": 100},
-    {"id": 2, "name": "keyboard", "price": 200},
-    {"id": 3, "name": "headphone", "price": 300},
-]
-
-COMMENTS = [
-    {"id": 1, "product_id": 1, "user": "user1", "comment": "very good"},
-    {"id": 2, "product_id": 1, "user": "user2", "comment": "เอาไปเลย 5 ดาว"},
-    {"id": 3, "product_id": 1, "user": "user3", "comment": "ชอบมากค่ะ"},
-    {"id": 4, "product_id": 2, "user": "user1", "comment": "แย่มาก"},
-    {"id": 5, "product_id": 2, "user": "user2", "comment": "เอาไปเลยหนึ่งนิ้วโป้ง"},
-]
+from django.contrib.auth.models import User
+from .models import Product, Order, ProductOrder
 
 def user_detail(request, username):
-    user_data = None
-    for user in USERS:
-        if user["username"] == username:
-            user_data = user
-            break
-    
-    if not user_data:
-        return JsonResponse({"error": "User not found"}, status=404)
+    user = get_object_or_404(User, username=username)
 
-    if request.GET.get("format") == "json":
-        return JsonResponse(user_data)
-    
-    return render(request, "user.html", user_data)
+    user_data = {
+        "email": user.email,
+        "signup_date": user.date_joined.strftime("%Y-%d-%m"),
+        "username": user.username
+    }
+    return JsonResponse(user_data)
 
 def product_all(request):
-    if request.GET.get("format") == "json":
-        return JsonResponse(PRODUCTS, safe=False)
-    return render(request, "product_all.html", {"products": PRODUCTS})
+    products = Product.objects.all()
+    product_list = []
+    for product in products:
+        product_list.append({
+            "id": product.id,
+            "name": product.name,
+            "price": product.price,
+            "stock": product.stock,
+            "category": product.category
+        })
+    return JsonResponse(product_list, safe=False)
 
 def productById(request, id):
-    product = None
-    for p in PRODUCTS:
-        if p["id"] == id:
-            product = p
-            break
+    try:
+        product = Product.objects.get(id=id)
+        product_data = {
+            "id": product.id,
+            "name": product.name,
+            "price": product.price,
+            "stock": product.stock,
+            "category": product.category
+        }
+        return JsonResponse(product_data)
+    except Product.DoesNotExist:
+        return JsonResponse({"error": "Product ID not Found!"}, status=404)
 
-    if not product:
-        return JsonResponse({"error": "Product not found"}, status=404)
-    
-    if request.GET.get("format") == "json":
-        return JsonResponse(product)
-    
-    return render(request, "productById.html", product)
+def order_by_product_id(request, id):
+    product_orders = ProductOrder.objects.filter(product_id=id)
 
-def comment(request, id):
-    filtered_comments = []
-    for c in COMMENTS:
-        if c["product_id"] == id:
-            filtered_comments.append(c)
+    if not product_orders.exists():
+        return JsonResponse({"error": "No orders found for this product ID!"}, status=404)
 
-    if request.GET.get("format") == "json":
-        return JsonResponse(filtered_comments, safe=False)
-
-    return render(request, "comment.html", {"comments": filtered_comments, "id": id})
+    order_list = []
+    for po in product_orders:
+        order_list.append({
+            "order_id": po.order.id,
+            "customer": po.order.customer.username,
+            "product": po.product.name,
+            "quantity": po.quantity,
+            "total_price": po.total_price,
+            "order_status": po.order.status
+        })
+    return JsonResponse(order_list, safe=False)
 
 def summarize(request):
-    mock_data = {
-        "total_products": len(PRODUCTS),
-        "total_orders": 10,
-        "total_comments": len(COMMENTS)
+    summary_data = {
+        "total_products": Product.objects.count(),
+        "total_orders": Order.objects.count(),
+        "total_users": User.objects.count()
     }
-
-    if request.GET.get("format") == "json":
-        return JsonResponse(mock_data)
-
-    return render(request, "summarize.html", mock_data)
+    return JsonResponse(summary_data)

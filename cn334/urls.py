@@ -24,6 +24,6 @@ urlpatterns = [
     path('user/<str:username>/', main_views.user_detail),
     path('product/all/', main_views.product_all),
     path('product/byid/<int:id>/', main_views.productById),
-    path('comment/byProductId/<int:id>/', main_views.comment),
+    path('order/byProductId/<int:id>/', main_views.order_by_product_id),
     path('summarize/', main_views.summarize),
 ]
